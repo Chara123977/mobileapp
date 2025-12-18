@@ -1,0 +1,107 @@
+// PomodoroViewModel.kt
+package com.example.pomodoronoise
+
+import android.app.Application
+import android.content.Intent
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
+
+data class PomodoroUiState(
+    val isRunning: Boolean = false,
+    val currentMode: String = "work",
+    val timeRemaining: Int = 25 * 60,
+    val workDuration: Int = 25 * 60,
+    val restDuration: Int = 5 * 60
+)
+
+class PomodoroViewModel(application: Application) : AndroidViewModel(application) {
+    private val _uiState = MutableStateFlow(PomodoroUiState())
+    val uiState: StateFlow<PomodoroUiState> = _uiState
+    private val app = application
+
+    private var timerJob: Job? = null
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun startTimer() {
+        if (_uiState.value.isRunning) return
+
+        // 启动前台服务（仅用于播放音频 + 保活通知）
+        val mode = _uiState.value.currentMode
+        val serviceIntent = Intent(app, PomodoroService::class.java).apply {
+            putExtra("mode", mode)
+        }
+        app.startForegroundService(serviceIntent)
+
+        // 启动倒计时协程（关键！）
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (_uiState.value.timeRemaining > 0) {
+                delay(1000)
+                _uiState.update { it.copy(timeRemaining = it.timeRemaining - 1) }
+            }
+            // 时间到
+            onTimerFinished()
+        }
+
+        _uiState.update { it.copy(isRunning = true) }
+    }
+
+    private fun onTimerFinished() {
+        // 震动已在 Service 中处理？或者这里也加？
+        // 停止服务（Service 会在自身完成时 stopSelf）
+        val serviceIntent = Intent(app, PomodoroService::class.java)
+        app.stopService(serviceIntent)
+
+        _uiState.update {
+            it.copy(
+                isRunning = false,
+                // 自动切换模式（可选）
+                currentMode = if (it.currentMode == "work") "rest" else "work",
+                timeRemaining = if (it.currentMode == "work") it.restDuration else it.workDuration
+            )
+        }
+    }
+
+    fun stopTimer() {
+        timerJob?.cancel()
+        timerJob = null
+
+        val serviceIntent = Intent(app, PomodoroService::class.java)
+        app.stopService(serviceIntent)
+
+        _uiState.update {
+            it.copy(
+                isRunning = false,
+                timeRemaining = if (it.currentMode == "work") it.workDuration else it.restDuration
+            )
+        }
+    }
+
+    fun switchToWork() {
+        if (!_uiState.value.isRunning) {
+            _uiState.update {
+                it.copy(currentMode = "work", timeRemaining = it.workDuration)
+            }
+        }
+    }
+
+    fun switchToRest() {
+        if (!_uiState.value.isRunning) {
+            _uiState.update {
+                it.copy(currentMode = "rest", timeRemaining = it.restDuration)
+            }
+        }
+    }
+
+    fun updateWorkDuration(minutes: Int) {
+        _uiState.update { it.copy(workDuration = minutes * 60) }
+    }
+
+    fun updateRestDuration(minutes: Int) {
+        _uiState.update { it.copy(restDuration = minutes * 60) }
+    }
+}
