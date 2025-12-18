@@ -104,4 +104,23 @@ class PomodoroViewModel(application: Application) : AndroidViewModel(application
     fun updateRestDuration(minutes: Int) {
         _uiState.update { it.copy(restDuration = minutes * 60) }
     }
+
+    fun updateCurrentDuration(minutes: Int) {
+        if (_uiState.value.currentMode == "work") {
+            _uiState.update {
+                it.copy(
+                    workDuration = minutes * 60,
+                    timeRemaining = if (!it.isRunning) minutes * 60 else it.timeRemaining
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    restDuration = minutes * 60,
+                    timeRemaining = if (!it.isRunning) minutes * 60 else it.timeRemaining
+                )
+            }
+        }
+    }
+
 }
