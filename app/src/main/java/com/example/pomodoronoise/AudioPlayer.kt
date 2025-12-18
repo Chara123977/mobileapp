@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
+import androidx.core.net.toUri
 
 class AudioPlayer(private val context: Context) { // 👈 接收 Context
 
@@ -11,7 +12,7 @@ class AudioPlayer(private val context: Context) { // 👈 接收 Context
 
     fun play(soundResId: Int) {
         // ✅ 现在可以用 context
-        val uri = Uri.parse("android.resource://${context.packageName}/$soundResId")
+        val uri = "android.resource://${context.packageName}/$soundResId".toUri()
         val mediaItem = MediaItem.fromUri(uri)
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
