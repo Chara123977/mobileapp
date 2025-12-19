@@ -1,18 +1,30 @@
+// AudioPlayer.kt
 package com.example.pomodoronoise
 
 import android.content.Context
-import android.net.Uri
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import androidx.core.net.toUri
 
-class AudioPlayer(private val context: Context) { // 👈 接收 Context
-
+class AudioPlayer(private val context: Context) {
     private val exoPlayer = ExoPlayer.Builder(context).build()
 
-    fun play(soundResId: Int) {
-        // ✅ 现在可以用 context
-        val uri = "android.resource://${context.packageName}/$soundResId".toUri()
+    // 定义可用的音声选项
+    enum class Sound(val resourceId: Int, val displayName: String) {
+        RAIN(R.raw.rain, "🌧️ 雨声"),
+        OCEAN(R.raw.cafe, "☕️ 咖啡馆"), // 假设你有这些资源文件
+        FOREST(R.raw.forest, "🐦 森林鸟鸣"),
+        BROWN_NOISE(R.raw.waves, "🌊 海浪")
+    }
+
+    private var currentSound: Sound = Sound.RAIN
+
+    fun play(sound: Sound = currentSound) {
+        // 如果正在播放且声音相同，则不重新加载
+        if (exoPlayer.isPlaying && sound == currentSound) return
+
+        currentSound = sound
+        val uri = "android.resource://${context.packageName}/${sound.resourceId}".toUri()
         val mediaItem = MediaItem.fromUri(uri)
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
@@ -27,4 +39,6 @@ class AudioPlayer(private val context: Context) { // 👈 接收 Context
     fun release() {
         exoPlayer.release()
     }
+
+    fun getCurrentSound(): Sound = currentSound
 }

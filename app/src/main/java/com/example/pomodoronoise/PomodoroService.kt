@@ -19,6 +19,7 @@ class PomodoroService : Service() {
 
     private lateinit var audioPlayer: AudioPlayer
     private var timerJob: Job? = null
+    private var currentSound: AudioPlayer.Sound = AudioPlayer.Sound.RAIN
 
     override fun onCreate() {
         super.onCreate()
@@ -26,15 +27,29 @@ class PomodoroService : Service() {
         audioPlayer = AudioPlayer(this)
     }
 
-    // PomodoroService.kt
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            "UPDATE_SOUND" -> {
+                val soundName = intent.getStringExtra("sound")
+                val sound = AudioPlayer.Sound.valueOf(soundName ?: "RAIN")
+                currentSound = sound
+                audioPlayer.release()
+                audioPlayer = AudioPlayer(this)
+                audioPlayer.play(sound)
+                return START_NOT_STICKY
+            }
+        }
+
         val mode = intent?.getStringExtra("mode") ?: "work"
+        val soundName = intent?.getStringExtra("sound")
+        currentSound = try {
+            AudioPlayer.Sound.valueOf(soundName ?: "RAIN")
+        } catch (e: IllegalArgumentException) {
+            AudioPlayer.Sound.RAIN
+        }
 
         startForeground(NOTIFICATION_ID, createNotification(mode))
-        audioPlayer.play(R.raw.rain)
-
-        // ❌ 不再启动倒计时协程！
-        // 因为倒计时由 ViewModel 管理，结束时会 stopService
+        audioPlayer.play(currentSound)
 
         return START_NOT_STICKY
     }

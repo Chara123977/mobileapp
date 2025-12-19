@@ -44,20 +44,24 @@ fun PomodoroApp(
         },
         onSwitchToWork = { viewModel.switchToWork() },
         onSwitchToRest = { viewModel.switchToRest() },
-        onUpdateCurrentDuration = { viewModel.updateCurrentDuration(it) } // 修改这一行
+        onUpdateCurrentDuration = { viewModel.updateCurrentDuration(it) },
+        onUpdateCurrentSound = { viewModel.updateCurrentSound(it) } // 添加这行
     )
 }
 
+// PomodoroApp.kt
 @Composable
 fun PomodoroScreen(
     uiState: PomodoroUiState,
     onStartStopClick: () -> Unit,
     onSwitchToWork: () -> Unit,
     onSwitchToRest: () -> Unit,
-    onUpdateCurrentDuration: (Int) -> Unit, // 修改这一行
+    onUpdateCurrentDuration: (Int) -> Unit,
+    onUpdateCurrentSound: (AudioPlayer.Sound) -> Unit, // 添加这行
     modifier: Modifier = Modifier
 ) {
     var openDialog by remember { mutableStateOf(false) }
+    var openSoundDialog by remember { mutableStateOf(false) } // 添加这行
     var editMode by remember { mutableStateOf("") }
     var timeInput by remember { mutableStateOf("") }
 
@@ -115,6 +119,17 @@ fun PomodoroScreen(
             }
         }
 
+        // 添加音声选择按钮
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { openSoundDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            Text("音声: ${uiState.currentSound.displayName}")
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // 开始/停止按钮
@@ -148,7 +163,7 @@ fun PomodoroScreen(
                     onClick = {
                         val minutes = timeInput.toIntOrNull()
                         if (minutes != null && minutes > 0) {
-                            onUpdateCurrentDuration(minutes) // 修改这一行
+                            onUpdateCurrentDuration(minutes)
                         }
                         openDialog = false
                     }
@@ -163,12 +178,41 @@ fun PomodoroScreen(
             }
         )
     }
+
+    // 音声选择对话框
+    if (openSoundDialog) {
+        AlertDialog(
+            onDismissRequest = { openSoundDialog = false },
+            title = { Text("选择音声") },
+            text = {
+                Column {
+                    AudioPlayer.Sound.values().forEach { sound ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onUpdateCurrentSound(sound)
+                                    openSoundDialog = false
+                                }
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = sound.displayName,
+                                color = if (sound == uiState.currentSound)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { openSoundDialog = false }) {
+                    Text("关闭")
+                }
+            }
+        )
+    }
 }
 
-
-//@Composable
-//fun formatTime(totalSeconds: Int): String {
-//    val minutes = totalSeconds / 60
-//    val seconds = totalSeconds % 60
-//    return String.format("%02d:%02d", minutes, seconds)
-//}

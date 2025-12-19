@@ -10,13 +10,16 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
+// PomodoroViewModel.kt
 data class PomodoroUiState(
     val isRunning: Boolean = false,
     val currentMode: String = "work",
     val timeRemaining: Int = 25 * 60,
     val workDuration: Int = 25 * 60,
-    val restDuration: Int = 5 * 60
+    val restDuration: Int = 5 * 60,
+    val currentSound: AudioPlayer.Sound = AudioPlayer.Sound.RAIN // 添加这行
 )
+
 
 class PomodoroViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(PomodoroUiState())
@@ -33,6 +36,7 @@ class PomodoroViewModel(application: Application) : AndroidViewModel(application
         val mode = _uiState.value.currentMode
         val serviceIntent = Intent(app, PomodoroService::class.java).apply {
             putExtra("mode", mode)
+            putExtra("sound", _uiState.value.currentSound.name) // 传递音声信息
         }
         app.startForegroundService(serviceIntent)
 
@@ -123,4 +127,16 @@ class PomodoroViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun updateCurrentSound(sound: AudioPlayer.Sound) {
+        _uiState.update { it.copy(currentSound = sound) }
+
+        // 如果正在运行，更新服务中的音声
+        if (_uiState.value.isRunning) {
+            val serviceIntent = Intent(app, PomodoroService::class.java).apply {
+                action = "UPDATE_SOUND"
+                putExtra("sound", sound.name)
+            }
+            app.startService(serviceIntent)
+        }
+    }
 }

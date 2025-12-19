@@ -12,7 +12,7 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher_foreground"
-        android:label="Focus Noise"
+        android:label="番茄钟"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         tools:targetApi="31">
 
