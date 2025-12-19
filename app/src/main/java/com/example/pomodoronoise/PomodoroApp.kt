@@ -1,8 +1,6 @@
 package com.example.pomodoronoise
 
-import com.example.pomodoronoise.formatTime
 import android.app.Application
-import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
@@ -45,7 +43,8 @@ fun PomodoroApp(
         onSwitchToWork = { viewModel.switchToWork() },
         onSwitchToRest = { viewModel.switchToRest() },
         onUpdateCurrentDuration = { viewModel.updateCurrentDuration(it) },
-        onUpdateCurrentSound = { viewModel.updateCurrentSound(it) } // 添加这行
+        onUpdateCurrentSound = { viewModel.updateCurrentSound(it) },
+        onToggleInfiniteMode = { viewModel.toggleInfiniteMode() } // 添加这一行
     )
 }
 
@@ -57,11 +56,12 @@ fun PomodoroScreen(
     onSwitchToWork: () -> Unit,
     onSwitchToRest: () -> Unit,
     onUpdateCurrentDuration: (Int) -> Unit,
-    onUpdateCurrentSound: (AudioPlayer.Sound) -> Unit, // 添加这行
+    onUpdateCurrentSound: (AudioPlayer.Sound) -> Unit,
+    onToggleInfiniteMode: () -> Unit, // 添加这一行
     modifier: Modifier = Modifier
 ) {
     var openDialog by remember { mutableStateOf(false) }
-    var openSoundDialog by remember { mutableStateOf(false) } // 添加这行
+    var openSoundDialog by remember { mutableStateOf(false) }
     var editMode by remember { mutableStateOf("") }
     var timeInput by remember { mutableStateOf("") }
 
@@ -117,6 +117,20 @@ fun PomodoroScreen(
             ) {
                 Text("休息")
             }
+        }
+
+        // 添加无限循环模式切换按钮
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onToggleInfiniteMode,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 12.dp)
+        ) {
+            Text(
+                text = if (uiState.isInfiniteMode) "无限循环: 开启" else "无限循环: 关闭",
+                color = MaterialTheme.colorScheme.surface,
+            )
         }
 
         // 添加音声选择按钮
@@ -215,4 +229,3 @@ fun PomodoroScreen(
         )
     }
 }
-

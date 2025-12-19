@@ -17,7 +17,8 @@ data class PomodoroUiState(
     val timeRemaining: Int = 25 * 60,
     val workDuration: Int = 25 * 60,
     val restDuration: Int = 5 * 60,
-    val currentSound: AudioPlayer.Sound = AudioPlayer.Sound.RAIN // 添加这行
+    val currentSound: AudioPlayer.Sound = AudioPlayer.Sound.RAIN, // 添加这行
+    val isInfiniteMode: Boolean = false
 )
 
 
@@ -54,21 +55,35 @@ class PomodoroViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(isRunning = true) }
     }
 
+    // PomodoroViewModel.kt
     private fun onTimerFinished() {
-        // 震动已在 Service 中处理？或者这里也加？
-        // 停止服务（Service 会在自身完成时 stopSelf）
-        val serviceIntent = Intent(app, PomodoroService::class.java)
-        app.stopService(serviceIntent)
+        // 获取当前状态
+        val currentState = _uiState.value
 
+        // 计算下一个模式
+        val nextMode = if (currentState.currentMode == "work") "rest" else "work"
+        val nextDuration = if (nextMode == "work") currentState.workDuration else currentState.restDuration
+
+        // 更新状态并自动开始下一阶段
         _uiState.update {
             it.copy(
-                isRunning = false,
-                // 自动切换模式（可选）
-                currentMode = if (it.currentMode == "work") "rest" else "work",
-                timeRemaining = if (it.currentMode == "work") it.restDuration else it.workDuration
+                currentMode = nextMode,
+                timeRemaining = nextDuration
             )
         }
+
+        // 自动开始下一个计时器
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (_uiState.value.timeRemaining > 0) {
+                delay(1000)
+                _uiState.update { it.copy(timeRemaining = it.timeRemaining - 1) }
+            }
+            // 递归调用自身实现无限循环
+            onTimerFinished()
+        }
     }
+
 
     fun stopTimer() {
         timerJob?.cancel()
@@ -84,6 +99,7 @@ class PomodoroViewModel(application: Application) : AndroidViewModel(application
             )
         }
     }
+
 
     fun switchToWork() {
         if (!_uiState.value.isRunning) {
@@ -138,5 +154,9 @@ class PomodoroViewModel(application: Application) : AndroidViewModel(application
             }
             app.startService(serviceIntent)
         }
+    }
+
+    fun toggleInfiniteMode() {
+        _uiState.update { it.copy(isInfiniteMode = !it.isInfiniteMode) }
     }
 }
